@@ -18,4 +18,21 @@
 #===============================================================================
 
 set -o nounset                                  # Treat unset variables as an error
-afl-fuzz -i ./fuzz-in -o ./fuzz-out -Q -- ./uninspired @@
+rm ./fuzz-out/ -rf
+IN="./fuzz-in"
+OUT="./fuzz-out"
+TAR=$(which ./uninspired_patch)
+ENV=""
+# main loop
+tmux new-window -d "$ENV afl-fuzz -i $IN -o $OUT -Q -M master -- $TAR;exec bash"
+
+echo "start master"
+# slave
+for i in {1..8};
+do
+  name="fuzz-slave-$i"
+  tmux new-window "$ENV afl-fuzz -i $IN -o $OUT -Q -S $name -- $TAR"
+  echo "stat $name"
+done
+# AFL_SKIP_CPUFREQ=1 afl-fuzz -i ./fuzz-in -o ./fuzz-out-patch -Q -- $(which ./uninspired_patch)
+
